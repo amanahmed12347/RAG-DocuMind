@@ -6,7 +6,7 @@ spring:
     name: springboot-rag-chatbot
   data:
     mongodb:
-      uri: ${MONGO_URI:mongodb://localhost:27017/rag_chatbot}
+      uri: ${MONGO_URI:mongodb://localhost:27017/quickbite}
   servlet:
     multipart:
       max-file-size: 25MB
