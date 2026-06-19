@@ -1,0 +1,45 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: springboot-rag-chatbot
+  data:
+    mongodb:
+      uri: ${MONGO_URI:mongodb://localhost:27017/rag_chatbot}
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 25MB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+rag:
+  chunk-size: 900
+  chunk-overlap: 150
+  default-top-k: 5
+  max-context-chars: 7000
+  min-relevance-score: 0.15
+
+embedding:
+  dimension: 384
+
+qdrant:
+  base-url: ${QDRANT_URL:http://localhost:6333}
+  collection-name: document_chunks
+  api-key: ${QDRANT_API_KEY:}
+
+openrouter:
+  base-url: https://openrouter.ai/api/v1
+  api-key: ${OPENROUTER_API_KEY:}
+  model: openai/gpt-4o-mini
+  temperature: 0.1
+  timeout-seconds: 60
+
+jwt:
+  secret: ${JWT_SECRET:4gk8J2LmP9sX7aR1dN5qT8wY3uH6zC0vB2eF9mK4pL7rS1xD}
+  expiration-ms: 86400000
