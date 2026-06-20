@@ -50,6 +50,12 @@ async function authFetch(url, options = {}) {
     const token = getToken();
     const headers = { ...options.headers };
 
+    if (!isAuthenticated()) {
+        console.warn('authFetch: token expired or invalid before request to', url);
+        window.location.href = '/login.html';
+        throw new Error('Unauthorized');
+    }
+
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
     }
@@ -62,6 +68,7 @@ async function authFetch(url, options = {}) {
 
     if (res.status === 401 || res.status === 403) {
         console.warn('authFetch: received', res.status, 'for', url);
+        console.error('Token was:', token ? token.substring(0, 20) + '...' : 'none');
         clearAuth();
         window.location.href = '/login.html';
         throw new Error('Unauthorized');

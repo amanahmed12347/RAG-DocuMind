@@ -17,6 +17,8 @@ const chatSubtitle = document.getElementById('chatSubtitle');
 const conversationList = document.getElementById('conversationList');
 const newChatBtn = document.getElementById('newChatBtn');
 
+console.log('app.js loaded, auth valid:', isAuthenticated(), 'user:', getUser()?.email);
+
 const user = getUser();
 if (user) {
     userName.textContent = user.name || '';
@@ -52,7 +54,10 @@ function getConversationHistory() {
 
 async function loadConversations() {
     try {
-        const res = await authFetch('/api/conversations');
+        const token = getToken();
+        const res = await fetch('/api/conversations', {
+            headers: token ? { Authorization: 'Bearer ' + token } : {}
+        });
         if (!res.ok) return;
         conversations = await res.json();
         renderConversations();
@@ -100,9 +105,10 @@ async function switchConversation(id) {
 
 async function newConversation() {
     try {
-        const res = await authFetch('/api/conversations', {
+        const token = getToken();
+        const res = await fetch('/api/conversations', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
             body: JSON.stringify({ title: 'New Chat' })
         });
         if (!res.ok) return;
@@ -192,7 +198,10 @@ function clearMessages() {
 
 async function loadDocuments() {
     try {
-        const res = await authFetch('/api/documents');
+        const token = getToken();
+        const res = await fetch('/api/documents', {
+            headers: token ? { Authorization: 'Bearer ' + token } : {}
+        });
         if (!res.ok) return;
         const docs = await res.json();
         documentList.innerHTML = '';
@@ -337,8 +346,14 @@ questionForm.addEventListener('submit', async (e) => {
     const question = questionInput.value.trim();
     if (!question) return;
 
+    if (!isAuthenticated()) {
+        console.warn('submit: token expired or missing');
+        return;
+    }
+
     if (!currentConversationId) {
         await newConversation();
+        if (!currentConversationId) return;
     }
 
     addMessage(question, 'user');
@@ -349,12 +364,16 @@ questionForm.addEventListener('submit', async (e) => {
     const streamingMsg = addStreamingBotMessage();
 
     try {
-        const res = await authFetch('/ask/stream', {
+        const token = getToken();
+        const res = await fetch('/ask/stream', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
             body: JSON.stringify({ question, topK: 5, history: getConversationHistory() })
         });
 
+        if (res.status === 401 || res.status === 403) {
+            throw new Error('Session expired. Please refresh the page to log in again.');
+        }
         if (!res.ok) {
             const err = await res.text();
             throw new Error(err || 'Request failed');
@@ -411,13 +430,16 @@ async function autoRenameConversation(firstQuestion) {
     if (!conv || conv.title !== 'New Chat') return;
     const title = firstQuestion.length > 50 ? firstQuestion.substring(0, 50) + '...' : firstQuestion;
     try {
-        await authFetch('/api/conversations/' + currentConversationId, {
+        const token = getToken();
+        const res = await fetch('/api/conversations/' + currentConversationId, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
             body: JSON.stringify({ title })
         });
-        await loadConversations();
-        updateChatHeader();
+        if (res.ok) {
+            await loadConversations();
+            updateChatHeader();
+        }
     } catch (e) {
     }
 }
