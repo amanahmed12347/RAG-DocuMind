@@ -9,10 +9,13 @@ const uploadZone = document.getElementById('uploadZone');
 const uploadStatus = document.getElementById('uploadStatus');
 const statusFileName = document.getElementById('statusFileName');
 const statusDetails = document.getElementById('statusDetails');
-const uploadProgress = document.getElementById('uploadProgress');
 const documentList = document.getElementById('documentList');
 const userName = document.getElementById('userName');
 const userAvatar = document.getElementById('userAvatar');
+const chatTitle = document.getElementById('chatTitle');
+const chatSubtitle = document.getElementById('chatSubtitle');
+const conversationList = document.getElementById('conversationList');
+const newChatBtn = document.getElementById('newChatBtn');
 
 const user = getUser();
 if (user) {
@@ -21,8 +24,157 @@ if (user) {
 }
 
 let documents = [];
+let conversations = [];
+let currentConversationId = null;
 
 loadDocuments();
+loadConversations();
+
+// ───── Conversations ─────
+
+async function loadConversations() {
+    try {
+        const res = await authFetch('/api/conversations');
+        if (!res.ok) return;
+        conversations = await res.json();
+        renderConversations();
+    } catch (e) {
+        // silent
+    }
+}
+
+function renderConversations() {
+    conversationList.innerHTML = '';
+    if (conversations.length === 0) {
+        conversationList.innerHTML = '<p class="empty-state">No conversations yet</p>';
+        return;
+    }
+    conversations.forEach(c => {
+        const item = document.createElement('div');
+        item.className = 'conversation-item' + (c.id === currentConversationId ? ' active' : '');
+        item.dataset.id = c.id;
+        item.innerHTML = `
+            <span class="conv-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                </svg>
+            </span>
+            <span class="conv-title">${escapeHtml(c.title)}</span>
+            <button class="conv-delete" onclick="deleteConversation('${c.id}')" title="Delete conversation">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        `;
+        item.addEventListener('click', () => switchConversation(c.id));
+        conversationList.appendChild(item);
+    });
+}
+
+async function switchConversation(id) {
+    if (id === currentConversationId) return;
+    saveMessagesToStorage();
+    currentConversationId = id;
+    loadMessagesFromStorage();
+    renderConversations();
+    updateChatHeader();
+}
+
+async function newConversation() {
+    try {
+        const res = await authFetch('/api/conversations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'New Chat' })
+        });
+        if (!res.ok) return;
+        const conv = await res.json();
+        saveMessagesToStorage();
+        currentConversationId = conv.id;
+        clearMessages();
+        addWelcomeMessage();
+        await loadConversations();
+        updateChatHeader();
+    } catch (e) {
+        // silent
+    }
+}
+
+async function deleteConversation(id) {
+    if (!confirm('Delete this conversation?')) return;
+    try {
+        const res = await authFetch('/api/conversations/' + id, { method: 'DELETE' });
+        if (!res.ok) return;
+        removeMessagesFromStorage(id);
+        if (id === currentConversationId) {
+            currentConversationId = null;
+            clearMessages();
+            addWelcomeMessage();
+            updateChatHeader();
+        }
+        await loadConversations();
+    } catch (e) {
+        // silent
+    }
+}
+
+function updateChatHeader() {
+    if (currentConversationId) {
+        const conv = conversations.find(c => c.id === currentConversationId);
+        if (conv) {
+            chatTitle.textContent = conv.title;
+            chatSubtitle.textContent = new Date(conv.updatedAt).toLocaleDateString();
+            return;
+        }
+    }
+    chatTitle.textContent = 'Ask a Question';
+    chatSubtitle.textContent = 'Ask questions about your uploaded documents';
+}
+
+// ───── Message Storage ─────
+
+const MSG_PREFIX = 'rag_chat_messages_';
+
+function getStorageKey(id) {
+    return MSG_PREFIX + id;
+}
+
+function saveMessagesToStorage() {
+    if (!currentConversationId) return;
+    const html = messages.innerHTML;
+    try {
+        localStorage.setItem(getStorageKey(currentConversationId), html);
+    } catch (e) {
+        // quota exceeded, ignore
+    }
+}
+
+function loadMessagesFromStorage() {
+    if (!currentConversationId) {
+        clearMessages();
+        addWelcomeMessage();
+        return;
+    }
+    const saved = localStorage.getItem(getStorageKey(currentConversationId));
+    clearMessages();
+    if (saved) {
+        messages.innerHTML = saved;
+    } else {
+        addWelcomeMessage();
+    }
+    scrollToBottom();
+}
+
+function removeMessagesFromStorage(id) {
+    localStorage.removeItem(getStorageKey(id));
+}
+
+function clearMessages() {
+    messages.innerHTML = '';
+}
+
+// ───── Documents ─────
 
 async function loadDocuments() {
     try {
@@ -72,6 +224,8 @@ fileInput.addEventListener('change', (e) => {
     if (files.length > 0) uploadFiles(files);
 });
 
+newChatBtn.addEventListener('click', newConversation);
+
 async function uploadFiles(files) {
     const pdfs = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.pdf'));
     if (pdfs.length !== Array.from(files).length) {
@@ -101,7 +255,6 @@ async function uploadFiles(files) {
                 console.error(`${file.name}: ${err}`);
                 hasError = true;
             } else {
-                const data = await res.json();
                 completed++;
             }
         } catch (err) {
@@ -137,7 +290,7 @@ function addDocumentItem(doc) {
                 <polyline points="14 2 14 8 20 8"/>
             </svg>
         </span>
-        <span class="doc-name">${doc.fileName}</span>
+        <span class="doc-name">${escapeHtml(doc.fileName)}</span>
         <span class="doc-chunks">${doc.chunkCount} chunks</span>
         <button class="doc-delete" onclick="deleteDocument('${doc.id}')" title="Delete document">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -172,6 +325,10 @@ questionForm.addEventListener('submit', async (e) => {
     const question = questionInput.value.trim();
     if (!question) return;
 
+    if (!currentConversationId) {
+        await newConversation();
+    }
+
     addMessage(question, 'user');
     questionInput.value = '';
     questionInput.disabled = true;
@@ -195,6 +352,9 @@ questionForm.addEventListener('submit', async (e) => {
 
         const data = await res.json();
         addBotMessage(data.answer, data.sources);
+        if (currentConversationId) {
+            autoRenameConversation(question);
+        }
     } catch (err) {
         removeMessage(loadingId);
         addMessage('Error: ' + err.message, 'user');
@@ -202,8 +362,45 @@ questionForm.addEventListener('submit', async (e) => {
         questionInput.disabled = false;
         sendBtn.disabled = false;
         questionInput.focus();
+        saveMessagesToStorage();
     }
 });
+
+async function autoRenameConversation(firstQuestion) {
+    if (!currentConversationId) return;
+    const conv = conversations.find(c => c.id === currentConversationId);
+    if (!conv || conv.title !== 'New Chat') return;
+    const title = firstQuestion.length > 50 ? firstQuestion.substring(0, 50) + '...' : firstQuestion;
+    try {
+        await authFetch('/api/conversations/' + currentConversationId, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title })
+        });
+        await loadConversations();
+        updateChatHeader();
+    } catch (e) {
+        // silent
+    }
+}
+
+function addWelcomeMessage() {
+    const msg = document.createElement('div');
+    msg.className = 'message welcome';
+    msg.innerHTML = `
+        <div class="avatar bot">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2a4 4 0 014 4v2a4 4 0 01-8 0V6a4 4 0 014-4z"/>
+                <path d="M20 18v2a4 4 0 01-4 4H8a4 4 0 01-4-4v-2"/>
+                <circle cx="12" cy="12" r="3"/>
+            </svg>
+        </div>
+        <div class="bubble">
+            <p>Upload a PDF document to get started, then ask me anything about it.</p>
+        </div>
+    `;
+    messages.appendChild(msg);
+}
 
 function addMessage(text, sender) {
     const msg = document.createElement('div');
@@ -239,7 +436,7 @@ function addBotMessage(answer, sources) {
             <summary>Sources (${sources.length})</summary>
             ${sources.map(s => `
                 <div class="source-item">
-                    <strong>${s.documentName}</strong> (chunk ${s.chunkIndex})
+                    <strong>${escapeHtml(s.documentName)}</strong> (chunk ${s.chunkIndex})
                     <span class="source-score">relevance: ${(s.score * 100).toFixed(0)}%</span>
                 </div>
             `).join('')}
@@ -293,4 +490,10 @@ function removeMessage(id) {
 
 function scrollToBottom() {
     messages.scrollTop = messages.scrollHeight;
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }

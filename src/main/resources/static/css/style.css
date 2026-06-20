@@ -246,6 +246,120 @@ body {
   display: block;
 }
 
+/* ───── CONVERSATIONS ───── */
+.conversations-section {
+  padding: var(--spacing-12) var(--spacing-20) 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.conversations-section .section-label {
+  font-family: var(--font-geist-mono);
+  font-size: 11px;
+  letter-spacing: -0.2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: var(--spacing-8);
+}
+
+.new-chat-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-6);
+  width: 100%;
+  padding: var(--spacing-6) var(--spacing-10);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-md);
+  color: rgba(255,255,255,0.6);
+  font-family: var(--font-geist);
+  font-size: 13px;
+  letter-spacing: -0.2px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: var(--spacing-8);
+}
+
+.new-chat-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.85);
+}
+
+.conversation-list {
+  max-height: 180px;
+  overflow-y: auto;
+  margin-bottom: var(--spacing-8);
+}
+
+.conversation-list .empty-state {
+  font-size: 12px;
+  letter-spacing: -0.2px;
+  color: rgba(255,255,255,0.2);
+  text-align: center;
+  padding: var(--spacing-8) 0;
+}
+
+.conversation-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8);
+  padding: var(--spacing-6) var(--spacing-10);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 13px;
+  letter-spacing: -0.2px;
+  color: rgba(255,255,255,0.5);
+  transition: all 0.15s;
+  margin-bottom: 2px;
+}
+
+.conversation-item:hover {
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.75);
+}
+
+.conversation-item.active {
+  background: rgba(239,111,46,0.1);
+  color: var(--color-signal-orange);
+}
+
+.conversation-item .conv-icon {
+  flex-shrink: 0;
+  color: rgba(255,255,255,0.2);
+}
+
+.conversation-item.active .conv-icon {
+  color: var(--color-signal-orange);
+}
+
+.conversation-item .conv-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversation-item .conv-delete {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.15);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+  opacity: 0;
+}
+
+.conversation-item:hover .conv-delete {
+  opacity: 1;
+}
+
+.conversation-item .conv-delete:hover {
+  color: var(--color-signal-orange);
+}
+
 /* ───── DOCUMENTS ───── */
 .documents-section {
   padding: var(--spacing-16) var(--spacing-20);
