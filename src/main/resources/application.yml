@@ -6,7 +6,7 @@ spring:
     name: springboot-rag-chatbot
   data:
     mongodb:
-      uri: ${MONGO_URI:mongodb://localhost:27017/quickbite}
+      uri: ${MONGO_URI}
   mvc:
     async:
       request-timeout: 300000
@@ -33,13 +33,13 @@ embedding:
   model: text-embedding-3-small
 
 qdrant:
-  base-url: ${QDRANT_URL:http://localhost:6333}
+  base-url: ${QDRANT_URL}
   collection-name: document_chunks
-  api-key: ${QDRANT_API_KEY:}
+  api-key: ${QDRANT_API_KEY}
 
 openrouter:
   base-url: https://openrouter.ai/api/v1
-  api-key: ${OPENROUTER_API_KEY:}
+  api-key: ${OPENROUTER_API_KEY}
   model: openai/gpt-4o-mini
   temperature: 0.1
   timeout-seconds: 60
