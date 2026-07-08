@@ -18,7 +18,7 @@
     <description>Production-style RAG Document Q&amp;A system with Spring Boot, Qdrant, PDFBox, and OpenRouter.</description>
 
     <properties>
-        <java.version>21</java.version>
+        <java.version>17</java.version>
     </properties>
 
     <dependencies>

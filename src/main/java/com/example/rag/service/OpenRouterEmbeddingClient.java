@@ -46,9 +46,10 @@ public class OpenRouterEmbeddingClient implements EmbeddingClient {
             throw new IllegalStateException("OpenRouter embedding returned an empty response.");
         }
 
-        float[] vector = new float[response.data().getFirst().embedding().length];
+        float[] original = response.data().get(0).embedding();
+        float[] vector = new float[original.length];
         for (int i = 0; i < vector.length; i++) {
-            vector[i] = response.data().getFirst().embedding()[i];
+            vector[i] = original[i];
         }
         return vector;
     }

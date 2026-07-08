@@ -53,7 +53,7 @@ public class OpenRouterChatClient implements ChatClient {
             throw new IllegalStateException("OpenRouter returned an empty response.");
         }
 
-        return response.choices().getFirst().message().content().trim();
+        return response.choices().get(0).message().content().trim();
     }
 
     @Override
