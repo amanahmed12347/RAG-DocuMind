@@ -6,6 +6,7 @@ import com.example.rag.config.RagProperties;
 import com.example.rag.llm.ChatClient;
 import com.example.rag.model.SearchResult;
 import com.example.rag.vector.VectorStore;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -14,6 +15,7 @@ import reactor.core.publisher.Flux;
 public class QuestionAnsweringService {
 
     private static final String UNKNOWN_ANSWER = "I don't know based on the provided documents.";
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final VectorStore vectorStore;
     private final PromptBuilder promptBuilder;
@@ -89,7 +91,7 @@ public class QuestionAnsweringService {
 
     private String toJson(Object obj) {
         try {
-            return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(obj);
+            return MAPPER.writeValueAsString(obj);
         } catch (Exception e) {
             return "{}";
         }

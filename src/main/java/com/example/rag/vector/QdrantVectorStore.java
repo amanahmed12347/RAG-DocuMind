@@ -37,8 +37,20 @@ public class QdrantVectorStore implements VectorStore {
         this.webClient = builder.build();
     }
 
+    private volatile boolean collectionReady = false;
+
     @PostConstruct
     public void ensureCollection() {
+        try {
+            doEnsureCollection();
+            collectionReady = true;
+            log.info("Connected to Qdrant at {}", properties.baseUrl());
+        } catch (Exception e) {
+            log.warn("Qdrant not available at startup ({}). Will retry on first request.", properties.baseUrl());
+        }
+    }
+
+    private void doEnsureCollection() {
         boolean exists = true;
         try {
             webClient.get()
@@ -65,6 +77,21 @@ public class QdrantVectorStore implements VectorStore {
         ensurePayloadIndex("documentId", "keyword");
     }
 
+    private void ensureReady() {
+        if (!collectionReady) {
+            synchronized (this) {
+                if (!collectionReady) {
+                    try {
+                        doEnsureCollection();
+                        collectionReady = true;
+                    } catch (Exception e) {
+                        throw new RuntimeException("Qdrant is not available: " + e.getMessage(), e);
+                    }
+                }
+            }
+        }
+    }
+
     private void ensurePayloadIndex(String fieldName, String fieldType) {
         try {
             webClient.put()
@@ -85,6 +112,7 @@ public class QdrantVectorStore implements VectorStore {
 
     @Override
     public void upsert(List<DocumentChunk> chunks) {
+        ensureReady();
         if (chunks.isEmpty()) {
             return;
         }
@@ -112,6 +140,7 @@ public class QdrantVectorStore implements VectorStore {
 
     @Override
     public List<SearchResult> search(String question, int topK) {
+        ensureReady();
         SearchRequest request = new SearchRequest(
                 embeddingClient.embed(question),
                 topK,
@@ -141,6 +170,7 @@ public class QdrantVectorStore implements VectorStore {
 
     @Override
     public void deleteByDocumentId(String documentId) {
+        ensureReady();
         webClient.post()
                 .uri("/collections/{collection}/points/delete?wait=true", properties.collectionName())
                 .bodyValue(Map.of("filter", Map.of(

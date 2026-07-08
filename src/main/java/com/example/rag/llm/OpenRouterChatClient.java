@@ -1,6 +1,7 @@
 package com.example.rag.llm;
 
 import com.example.rag.config.OpenRouterProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
@@ -14,6 +15,8 @@ import reactor.core.publisher.Flux;
 
 @Service
 public class OpenRouterChatClient implements ChatClient {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final WebClient webClient;
     private final OpenRouterProperties properties;
@@ -82,8 +85,7 @@ public class OpenRouterChatClient implements ChatClient {
 
     private String parseStreamContent(String json) {
         try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            var node = mapper.readTree(json);
+            var node = MAPPER.readTree(json);
             var choice = node.path("choices").get(0);
             if (choice == null) return "";
             return choice.path("delta").path("content").asText("");
